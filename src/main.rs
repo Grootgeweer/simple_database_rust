@@ -5,6 +5,7 @@ use std::process;
 enum StatementType {
     StatementInsert,
     StatementSelect,
+    StatementNone,
 }
 
 enum MetaCommandResult {
@@ -12,6 +13,7 @@ enum MetaCommandResult {
     MetaCommandUnrecognizedCommand,
 }
 
+#[derive(Debug)]
 enum PrepareResult {
     PrepareSuccess,
     PrepareUnrecognizedStatement,
@@ -65,7 +67,25 @@ fn do_meta_command(input_buffer: &mut InputBuffer) -> MetaCommandResult {
     }
 }
 
-fn prepare_statement(input_buffer: &mut InputBuffer, statement: &mut Statement) -> PrepareResult {}
+fn prepare_statement(input_buffer: &mut InputBuffer, statement: &mut Statement) -> PrepareResult {
+    if input_buffer.input_length >= 6 && &input_buffer.buffer[..6] == "insert" {
+        statement.statement_type = StatementType::StatementInsert;
+        PrepareResult::PrepareSuccess
+    } else if input_buffer.buffer == "select" {
+        statement.statement_type = StatementType::StatementSelect;
+        PrepareResult::PrepareSuccess
+    } else {
+        PrepareResult::PrepareUnrecognizedStatement
+    }
+}
+
+fn execute_statement(statement: &mut Statement) {
+    match statement.statement_type {
+        StatementType::StatementInsert => println!("Insert statement would be executed"),
+        StatementType::StatementSelect => println!("Select statement would be executed"),
+        StatementType::StatementNone => println!("No statement would be executed"),
+    }
+}
 
 fn main() {
     let mut input_buffer = InputBuffer::new();
@@ -78,11 +98,17 @@ fn main() {
             match do_meta_command(&mut input_buffer) {
                 MetaCommandResult::MetaCommandSuccess => continue,
                 MetaCommandResult::MetaCommandUnrecognizedCommand => {
-                    println!("Unrecognized command: {}", input_buffer.buffer)
+                    println!("Unrecognized meta command: {}", input_buffer.buffer)
                 }
             }
         } else {
-            println!("test");
+            let mut statement = Statement {
+            statement_type: StatementType::StatementNone,
+            };
+            match prepare_statement(&mut input_buffer, &mut statement) {
+                PrepareResult::PrepareSuccess => execute_statement(&mut statement),
+                PrepareResult::PrepareUnrecognizedStatement => println!("Unrecognized statement"),
+            }
         }
     }
 }

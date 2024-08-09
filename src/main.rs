@@ -81,6 +81,8 @@ fn main() {
                     println!("Unrecognized command: {}", input_buffer.buffer)
                 }
             }
+        } else {
+            println!("test");
         }
     }
 }

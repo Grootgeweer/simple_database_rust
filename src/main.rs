@@ -103,7 +103,7 @@ fn main() {
             }
         } else {
             let mut statement = Statement {
-            statement_type: StatementType::StatementNone,
+                statement_type: StatementType::StatementNone,
             };
             match prepare_statement(&mut input_buffer, &mut statement) {
                 PrepareResult::PrepareSuccess => execute_statement(&mut statement),

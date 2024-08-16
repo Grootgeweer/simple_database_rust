@@ -166,12 +166,15 @@ fn main() {
                 PrepareResult::PrepareSuccess => break,
                 PrepareResult::PrepareSyntaxError => {
                     println!("Syntax error. Could not parse statement.");
-                    continue
-                },
+                    continue;
+                }
                 PrepareResult::PrepareUnrecognizedStatement => {
-                    println!("Unrecognized statement at the start: {}", input_buffer.buffer);
-                    continue
-                },
+                    println!(
+                        "Unrecognized statement at the start: {}",
+                        input_buffer.buffer
+                    );
+                    continue;
+                }
             }
         }
     }

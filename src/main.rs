@@ -2,6 +2,23 @@ use std::io::{self, Write};
 use std::iter::Iterator;
 use std::process;
 
+const ID_SIZE: usize = 4;
+const COLUMN_USERNAME_SIZE: usize = 32;
+const COLUMN_EMAIL_SIZE: usize = 255;
+const ID_OFFSET: usize = 0;
+const USER_NAME_OFFSET: usize = ID_OFFSET + ID_SIZE;
+const EMAIL_OFFSET: usize = USER_NAME_OFFSET + COLUMN_USERNAME_SIZE;
+const ROW_SIZE: usize = ID_SIZE + COLUMN_USERNAME_SIZE + COLUMN_EMAIL_SIZE;
+const PAGE_SIZE: usize = 4096;
+const TABLE_MAX_PAGES: usize = 100;
+const ROWS_PER_PAGE: usize = PAGE_SIZE / ROW_SIZE;
+const TABLE_MAX_ROWS: usize = ROWS_PER_PAGE * TABLE_MAX_PAGES;
+
+enum ExecuteResult {
+    ExecuteSucces,
+    ExecuteTableFull,
+}
+
 enum StatementType {
     StatementInsert,
     StatementSelect,
@@ -16,11 +33,49 @@ enum MetaCommandResult {
 #[derive(Debug)]
 enum PrepareResult {
     PrepareSuccess,
+    PrepareSyntaxError,
     PrepareUnrecognizedStatement,
+}
+
+struct Row {
+    id: u32,
+    username: String,
+    email: String,
+}
+
+impl Row {
+    fn new() -> Self {
+        Self {
+            id: 0,
+            username: String::with_capacity(COLUMN_USERNAME_SIZE),
+            email: String::with_capacity(COLUMN_EMAIL_SIZE),
+        }
+    }
+}
+
+struct Table {
+    num_rows: usize,
+    pages: [Option<Vec<u8>>; TABLE_MAX_PAGES],
+}
+
+impl Default for Table {
+    fn default() -> Self {
+        Table {
+            num_rows: 0,
+            pages: [(); TABLE_MAX_PAGES].map(|_| None),
+        }
+    }
+}
+
+impl Table {
+    fn new() -> Self {
+        Self::default()
+    }
 }
 
 struct Statement {
     statement_type: StatementType,
+    row_to_insert: Row,
 }
 
 #[derive(Debug)]
@@ -53,7 +108,7 @@ fn read_input(input_buffer: &mut InputBuffer) {
         }
         Err(_) => {
             println!("Error reading input");
-            std::process::exit(1);
+            process::exit(1);
         }
     }
 }
@@ -88,6 +143,7 @@ fn execute_statement(statement: &mut Statement) {
 }
 
 fn main() {
+    let mut table = Table::new();
     let mut input_buffer = InputBuffer::new();
 
     loop {
@@ -104,10 +160,18 @@ fn main() {
         } else {
             let mut statement = Statement {
                 statement_type: StatementType::StatementNone,
+                row_to_insert: Row::new(),
             };
             match prepare_statement(&mut input_buffer, &mut statement) {
-                PrepareResult::PrepareSuccess => execute_statement(&mut statement),
-                PrepareResult::PrepareUnrecognizedStatement => println!("Unrecognized statement"),
+                PrepareResult::PrepareSuccess => break,
+                PrepareResult::PrepareSyntaxError => {
+                    println!("Syntax error. Could not parse statement.");
+                    continue
+                },
+                PrepareResult::PrepareUnrecognizedStatement => {
+                    println!("Unrecognized statement at the start: {}", input_buffer.buffer);
+                    continue
+                },
             }
         }
     }
